@@ -11,6 +11,7 @@ export enum CustomErrorCode {
     ACCESS_DENIED = 'TB_PERM_200',
     ACTION_NOT_ALLOWED = 'TB_PERM_201',
 
+
     // Validation
     INVALID_INPUT = 'TB_VAL_300',
     FIELD_FORMAT_INVALID = 'TB_VAL_301',
@@ -47,3 +48,17 @@ export enum CustomErrorCode {
     TENANT_UNAVAILABLE='TENANT_UNAVAILABLE',
 
 }
+
+//
+// {
+//     "statusCode": 400,
+//         "errorCode":"TB_PAY_802",
+//     "message": "Refund failed",
+//
+// }
+//
+// {
+//     "statusCode":400,
+//     errorCode:"TB_VAL_301",
+//     message:"Username must be a valid 6 lenght character"
+// }

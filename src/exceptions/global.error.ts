@@ -79,6 +79,8 @@ export function createApiErrorResponse(
     };
 }
 
+//Operational Error
+
 function formatZodError(error: ZodError) {
     return error.issues.map(e => ({
         field: e.path.join("."),
