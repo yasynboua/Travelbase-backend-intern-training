@@ -63,26 +63,71 @@ class AuthService {
     }
 
     public static async login(input: LoginDTO): Promise<IService> {
+        const {email, password, deviceId} = input;
 
-        //check if the user email is valid and verify the user exist in the database
-        // verify they are using the right password...
-        // verify the deviceId is a recognised device, if not,
-        // we send an email OTP to the user email to let them know that an
-        // unrecognised device is trying to access their account from a location
-        // that is not recognised.
-        // if the device is not recognised, we block the user from logging in and sent them email OTP to verify their identity.
+        // 1. Verify user exists
+        const user = await prisma.users.findUnique({
+            where: {email},
+            include: {UserAuths: true},
+        });
+        if (!user || user.UserAuths.length === 0) {
+            throw new NotFoundError({
+                msg: "Invalid email or password",
+                errorCode: CustomErrorCode.RESOURCE_NOT_FOUND,
+            });
+        }
 
-        // if all are true, we generate a JWT tokens and return it to the client.
+        // 2. Verify password
+        const userAuth = user.UserAuths[0];
+        const passwordMatch = await bcrypt.compare(password, userAuth.passwordHash);
+        if (!passwordMatch) {
+            throw new UnAuthorizedError({
+                msg: "Invalid email or password",
+                errorCode: CustomErrorCode.AUTH_INVALID,
+            });
+        }
+
+        // 3. Check if device is recognized
+        const recognizedToken = await prisma.userTokens.findFirst({
+            where: {userId: user.id, deviceId},
+        });
+
+        if (!recognizedToken) {
+            // Generate a 6-digit OTP and store it with a 10-minute expiry
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+            const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+            await prisma.userVerifications.create({
+                data: {userId: user.id, token: otp, deviceId, expiresAt},
+            });
+
+            // TODO: send OTP to user.email via email service
+
+            throw new UnAuthorizedError({
+                msg: "Unrecognized device. A verification code has been sent to your email.",
+                errorCode: CustomErrorCode.AUTH_BLOCKED,
+            });
+        }
+
+        // 4. Device recognized — issue fresh tokens
+        const tokenPayload = {userId: user.id, email: user.email, deviceId};
+        const accessToken = generateAccessToken(tokenPayload);
+        const refreshToken = generateRefreshToken(tokenPayload);
+
+        await prisma.userTokens.update({
+            where: {id: recognizedToken.id},
+            data: {accessToken, refreshToken},
+        });
 
         return {
             success: true,
             message: "Login successful",
             data: {
-                accessToken: "",
-                refreshToken: "",
-                user: {}
-            }
-        }
+                accessToken,
+                refreshToken,
+                user: {id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName},
+            },
+        };
     }
 
     public static async verifyDeviceChange(input: VerifyDeviceChangeOTPDTO): Promise<IService> {
