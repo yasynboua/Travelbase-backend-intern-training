@@ -8,7 +8,7 @@ import {
 } from "../interfaces";
 
 import {prisma} from "../lib/db";
-import {BadRequestError, CustomErrorCode, NotFoundError, UnAuthorizedError} from "../exceptions";
+import {BadRequestError, CustomErrorCode, UnAuthorizedError} from "../exceptions";
 import {generateJwtToken, TOKEN_TYPE, hashPassword, verifyPassword} from "../helpers";
 
 // Souce of Truth -> Database
@@ -69,9 +69,9 @@ class AuthService {
             include: {UserAuths: true},
         });
         if (!user || user.UserAuths.length === 0) {
-            throw new NotFoundError({
+            throw new UnAuthorizedError({
                 msg: "Invalid email or password",
-                errorCode: CustomErrorCode.RESOURCE_NOT_FOUND,
+                errorCode: CustomErrorCode.AUTH_INVALID,
             });
         }
 
