@@ -10,7 +10,7 @@ export const SignupRequest = z.object({
     password: z.string().min(8).max(128),
     firstName: z.string().min(4).max(100),
     lastName: z.string().min(4).max(100),
-    phone: z.string().min(5).max(20),
+    phone: z.string().min(11).max(11),
     company: z.string().min(1).max(200),
 });
 
