@@ -9,8 +9,7 @@ import {
 
 import {prisma} from "../lib/db";
 import {BadRequestError, CustomErrorCode, NotFoundError, UnAuthorizedError} from "../exceptions";
-import bcrypt from "bcryptjs";
-import {generateJwtToken, TOKEN_TYPE} from "../helpers";
+import {generateJwtToken, TOKEN_TYPE, hashPassword, verifyPassword} from "../helpers";
 
 // Souce of Truth -> Database
 
@@ -31,7 +30,7 @@ class AuthService {
             });
         }
 
-        const passwordHash = await bcrypt.hash(password, 12);
+        const passwordHash = await hashPassword(password);
 
         // TODO: phone and company fields need to be added to the Users model in schema.prisma
         const user = await prisma.users.create({
@@ -78,7 +77,7 @@ class AuthService {
 
         // 2. Verify password
         const userAuth = user.UserAuths[0];
-        const passwordMatch = await bcrypt.compare(password, userAuth.passwordHash);
+        const passwordMatch = await verifyPassword(password, userAuth.passwordHash);
         if (!passwordMatch) {
             throw new UnAuthorizedError({
                 msg: "Invalid email or password",
