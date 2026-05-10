@@ -62,20 +62,29 @@ class AuthService {
     public static async login(input: LoginDTO): Promise<IService> {
         const {email, password, deviceId} = input;
 
-        // 1. Verify user exists
+        // 1. Verify user exists (clean query: no relation hydration here)
         const user = await prisma.users.findUnique({
             where: {email},
-            include: {UserAuths: true},
         });
-        if (!user || user.UserAuths.length === 0) {
+        if (!user) {
             throw new UnAuthorizedError({
                 msg: "Invalid email or password",
                 errorCode: CustomErrorCode.AUTH_INVALID,
             });
         }
 
-        // 2. Verify password
-        const userAuth = user.UserAuths[0];
+        // 2. Verify auth row exists
+        const userAuth = await prisma.userAuths.findUnique({
+            where: {userId: user.id},
+        });
+        if (!userAuth) {
+            throw new UnAuthorizedError({
+                msg: "Invalid email or password",
+                errorCode: CustomErrorCode.AUTH_INVALID,
+            });
+        }
+
+        // 3. Verify password
         const passwordMatch = await verifyPassword(password, userAuth.passwordHash);
         if (!passwordMatch) {
             throw new UnAuthorizedError({
@@ -84,15 +93,19 @@ class AuthService {
             });
         }
 
-        // find user tokens — check if the user deviceId is part of the recognised devices
-        const recognizedToken = await prisma.userTokens.findFirst({
-            where: {userId: user.id, deviceId},
-        });
-
-        if (!recognizedToken) {
-            // Generate a 6-digit OTP and store it with a 10-minute expiry
+        // 4. Check if deviceId is part of the recognised devices
+        const isRecognisedDevice = userAuth.recognisedDevices.includes(deviceId);
+        if (!isRecognisedDevice) {
             const otp = Math.floor(100000 + Math.random() * 900000).toString();
             const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+            // Confirmation token the verifyDeviceChange endpoint uses as its auth header
+            const confirmationToken = generateJwtToken({
+                userId: user.id,
+                email: user.email,
+                deviceId,
+                tokenType: TOKEN_TYPE.RESET_TOKEN,
+            });
 
             await prisma.userVerifications.create({
                 data: {userId: user.id, token: otp, deviceId, expiresAt},
@@ -100,18 +113,20 @@ class AuthService {
 
             // TODO: send OTP to user.email via email service
 
-            throw new UnAuthorizedError({
-                msg: "Unrecognized device. A verification code has been sent to your email.",
+            const error = new UnAuthorizedError({
+                msg: "Unrecognised device. A verification code has been sent to your email.",
                 errorCode: CustomErrorCode.AUTH_BLOCKED,
             });
+            error.data = {confirmationToken};
+            throw error;
         }
 
-        // 4. Device recognized — issue fresh tokens
+        // 5. Device recognised — issue fresh tokens
         const accessToken = generateJwtToken({userId: user.id, email: user.email, deviceId, tokenType: TOKEN_TYPE.AUTH_TOKEN});
         const refreshToken = generateJwtToken({userId: user.id, email: user.email, deviceId, tokenType: TOKEN_TYPE.REFRESH_TOKEN});
 
-        await prisma.userTokens.update({
-            where: {id: recognizedToken.id},
+        await prisma.userTokens.updateMany({
+            where: {userId: user.id, deviceId},
             data: {accessToken, refreshToken},
         });
 
@@ -121,9 +136,10 @@ class AuthService {
             data: {
                 accessToken,
                 refreshToken,
-                user: (({UserAuths: _, ...u}) => u)(user),
+                user,
             },
         };
+
     }
 
     public static async verifyDeviceChange(input: VerifyDeviceChangeOTPDTO): Promise<IService> {
