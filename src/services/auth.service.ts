@@ -41,8 +41,18 @@ class AuthService {
                 data: {userId: user.id, passwordHash, recognisedDevices: [deviceId]},
             });
 
-            const accessToken = generateJwtToken({userId: user.id, email: user.email, deviceId, tokenType: TOKEN_TYPE.AUTH_TOKEN});
-            const refreshToken = generateJwtToken({userId: user.id, email: user.email, deviceId, tokenType: TOKEN_TYPE.REFRESH_TOKEN});
+            const accessToken = generateJwtToken({
+                userId: user.id,
+                email: user.email,
+                deviceId,
+                tokenType: TOKEN_TYPE.AUTH_TOKEN
+            });
+            const refreshToken = generateJwtToken({
+                userId: user.id,
+                email: user.email,
+                deviceId,
+                tokenType: TOKEN_TYPE.REFRESH_TOKEN
+            });
 
             await tx.userTokens.create({
                 data: {userId: user.id, deviceId, accessToken, refreshToken},
@@ -65,7 +75,6 @@ class AuthService {
     public static async login(input: LoginDTO): Promise<IService> {
         const {email, password, deviceId} = input;
 
-        // 1. Verify user exists (clean query: no relation hydration here)
         const user = await prisma.users.findUnique({
             where: {email},
         });
@@ -76,8 +85,7 @@ class AuthService {
             });
         }
 
-        // 2. Verify auth row exists
-        const userAuth = await prisma.userAuths.findUnique({
+        const userAuth = await prisma.userAuths.findFirst({
             where: {userId: user.id},
         });
         if (!userAuth) {
@@ -87,7 +95,6 @@ class AuthService {
             });
         }
 
-        // 3. Verify password
         const passwordMatch = await verifyPassword(password, userAuth.passwordHash);
         if (!passwordMatch) {
             throw new UnAuthorizedError({
@@ -96,7 +103,6 @@ class AuthService {
             });
         }
 
-        // 4. Check if deviceId is part of the recognised devices
         const isRecognisedDevice = userAuth.recognisedDevices.includes(deviceId);
         if (!isRecognisedDevice) {
             const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -114,13 +120,23 @@ class AuthService {
             });
         }
 
-        // 5. Device recognised — issue fresh tokens
-        const accessToken = generateJwtToken({userId: user.id, email: user.email, deviceId, tokenType: TOKEN_TYPE.AUTH_TOKEN});
-        const refreshToken = generateJwtToken({userId: user.id, email: user.email, deviceId, tokenType: TOKEN_TYPE.REFRESH_TOKEN});
+        const accessToken = generateJwtToken({
+            userId: user.id,
+            email: user.email,
+            deviceId,
+            tokenType: TOKEN_TYPE.AUTH_TOKEN
+        });
+        const refreshToken = generateJwtToken({
+            userId: user.id,
+            email: user.email,
+            deviceId,
+            tokenType: TOKEN_TYPE.REFRESH_TOKEN
+        });
 
-        await prisma.userTokens.updateMany({
-            where: {userId: user.id, deviceId},
-            data: {accessToken, refreshToken},
+
+         await prisma.userTokens.update({
+            where: {userId:user.id},
+            data: { accessToken, refreshToken, deviceId },
         });
 
         return {
@@ -166,8 +182,8 @@ class AuthService {
         return {
             success: true,
             message: "Password reset link sent to your email",
-            data:{
-                confirmationToken:"" // a jwt token that will used an header to verify the reset is coming from our server initiated request
+            data: {
+                confirmationToken: "" // a jwt token that will used an header to verify the reset is coming from our server initiated request
             }
         }
     }
