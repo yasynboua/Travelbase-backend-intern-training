@@ -39,35 +39,28 @@ class UserService {
             throw new NotFoundError({msg: "User not found", errorCode: CustomErrorCode.RESOURCE_NOT_FOUND});
         }
 
-        const redisAvailable = redisClient.isReady;
+        const attemptsRaw = await redisClient.get(pwdAttemptKey(userId));
+        const attempts = attemptsRaw ? parseInt(attemptsRaw) : 0;
 
-        const attempts = redisAvailable
-            ? parseInt((await redisClient.get(pwdAttemptKey(userId))) ?? '0')
-            : 0;
-
-        if (redisAvailable && attempts >= MAX_PWD_ATTEMPTS) {
+        if (attempts >= MAX_PWD_ATTEMPTS) {
             throw new ForbiddenError({msg: "Too many failed attempts. Please try again later.", errorCode: CustomErrorCode.TOO_MANY_ATTEMPTS});
         }
 
         const isMatch = await verifyPassword(currentPassword, userAuth.passwordHash);
         if (!isMatch) {
-            if (redisAvailable) {
-                await redisClient.set(pwdAttemptKey(userId), (attempts + 1).toString());
-                await redisClient.expire(pwdAttemptKey(userId), PWD_ATTEMPT_TTL);
-            }
+            await redisClient.set(pwdAttemptKey(userId), (attempts + 1).toString());
+            await redisClient.expire(pwdAttemptKey(userId), PWD_ATTEMPT_TTL);
             throw new UnAuthorizedError({msg: "Current password is incorrect", errorCode: CustomErrorCode.AUTH_INVALID});
         }
 
         const isSamePassword = await verifyPassword(newPassword, userAuth.passwordHash);
         if (isSamePassword) {
-            if (redisAvailable) {
-                await redisClient.set(pwdAttemptKey(userId), (attempts + 1).toString());
-                await redisClient.expire(pwdAttemptKey(userId), PWD_ATTEMPT_TTL);
-            }
+            await redisClient.set(pwdAttemptKey(userId), (attempts + 1).toString());
+            await redisClient.expire(pwdAttemptKey(userId), PWD_ATTEMPT_TTL);
             throw new BadRequestError({msg: "New password must be different from current password", errorCode: CustomErrorCode.BAD_REQUEST});
         }
 
-        if (redisAvailable) await redisClient.del(pwdAttemptKey(userId));
+        await redisClient.del(pwdAttemptKey(userId));
         const newPasswordHash = await hashPassword(newPassword);
         await UserRepository.updatePasswordHash(userId, newPasswordHash);
 
