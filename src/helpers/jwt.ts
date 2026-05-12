@@ -1,5 +1,9 @@
 import jwt from 'jsonwebtoken';
+<<<<<<< HEAD
 import {config} from '../config';
+=======
+import { config } from '../config';
+>>>>>>> upstream/master
 
 export enum TOKEN_TYPE {
     AUTH_TOKEN = 'AUTH_TOKEN',
@@ -24,7 +28,13 @@ export function generateJwtToken(payload: TokenPayload): string {
             expiresIn: config.jwt.refreshExpiresIn as jwt.SignOptions['expiresIn'],
         });
     } else if (payload.tokenType === TOKEN_TYPE.RESET_TOKEN) {
+<<<<<<< HEAD
         return jwt.sign(payload, config.jwt.secret, {expiresIn: '1h'});
+=======
+        return jwt.sign(payload, config.jwt.secret, {
+            expiresIn: '1h',
+        });
+>>>>>>> upstream/master
     }
     throw new Error('Invalid token type');
 }

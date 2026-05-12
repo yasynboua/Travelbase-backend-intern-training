@@ -18,20 +18,32 @@ model Users {
   email             String              @unique
   firstName         String?
   lastName          String?
+  phone             String?
+  company           String?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
-  UserAuths         UserAuths[]
+  userAuths         UserAuths?
   UserVerifications UserVerifications[]
-  UserTokens        UserTokens[]
+  UserTokens        UserTokens?
 }
 
 model UserAuths {
+<<<<<<< HEAD
   id           String   @id @default(uuid())
   userId       String   @unique
   passwordHash String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   user         Users    @relation(fields: [userId], references: [id])
+=======
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  passwordHash      String
+  recognisedDevices String[] @default([])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              Users    @relation(fields: [userId], references: [id])
+>>>>>>> upstream/master
 }
 
 model UserVerifications {
@@ -47,7 +59,7 @@ model UserVerifications {
 
 model UserTokens {
   id           String   @id @default(uuid())
-  userId       String
+  userId       String   @unique
   refreshToken String
   accessToken  String
   deviceId     String

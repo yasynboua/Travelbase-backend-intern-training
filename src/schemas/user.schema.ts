@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import {z} from 'zod';
 
 export const ChangePasswordRequest = z.object({
@@ -7,3 +8,8 @@ export const ChangePasswordRequest = z.object({
     message: 'New password must be different from current password',
     path: ['newPassword'],
 });
+=======
+import {z} from "zod";
+
+export const IdParamSchema=z.object({id:z.string().uuid()})
+>>>>>>> upstream/master
