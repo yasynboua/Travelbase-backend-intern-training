@@ -1,5 +1,8 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
+import { healthRoutes } from './routes';
+import { welcomeroutes } from './routes';
 // import rateLimit from "@fastify/rate-limit";
 import {healthRoutes, AuthRouter, UserRouter} from './routes';
 import {config} from "./config";
@@ -26,8 +29,10 @@ export function buildServer() {
     app.register(AuthRouter);
     app.register(UserRouter);
     app.register(healthRoutes);
+    app.register(welcomeroutes); 
 
     // Ensure this is always the last route registered to catch any unhandled routes and errors
     app.setErrorHandler(fastifyErrorHandler);
     return app;
+    
 }
