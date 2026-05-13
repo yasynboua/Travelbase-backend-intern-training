@@ -134,9 +134,9 @@ class AuthService {
         });
 
 
-         await prisma.userTokens.update({
-            where: {userId:user.id},
-            data: { accessToken, refreshToken, deviceId },
+        await prisma.userTokens.updateMany({
+            where: {userId: user.id, deviceId},
+            data: {accessToken, refreshToken},
         });
 
         return {
