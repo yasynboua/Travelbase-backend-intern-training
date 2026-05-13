@@ -28,14 +28,6 @@ model Users {
 }
 
 model UserAuths {
-<<<<<<< HEAD
-  id           String   @id @default(uuid())
-  userId       String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  user         Users    @relation(fields: [userId], references: [id])
-=======
   id                String   @id @default(uuid())
   userId            String   @unique
   passwordHash      String
@@ -43,7 +35,6 @@ model UserAuths {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   user              Users    @relation(fields: [userId], references: [id])
->>>>>>> upstream/master
 }
 
 model UserVerifications {
