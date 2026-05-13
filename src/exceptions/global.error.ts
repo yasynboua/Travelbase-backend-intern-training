@@ -79,6 +79,8 @@ export function createApiErrorResponse(
     };
 }
 
+//Operational Error
+
 function formatZodError(error: ZodError) {
     return error.issues.map(e => ({
         field: e.path.join("."),
@@ -121,7 +123,7 @@ export async function fastifyErrorHandler(
                 statusCode: error.statusCode,
                 errorCode: error.errorCode,
                 message: error.message,
-                fault: error.fault
+                fault: error.fault,
             })
         );
     }

@@ -11,6 +11,7 @@ export enum CustomErrorCode {
     ACCESS_DENIED = 'TB_PERM_200',
     ACTION_NOT_ALLOWED = 'TB_PERM_201',
 
+
     // Validation
     INVALID_INPUT = 'TB_VAL_300',
     FIELD_FORMAT_INVALID = 'TB_VAL_301',
